@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Encontre o Ícone Diferente</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .instructions {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 20px;
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .icon-cell {
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .icon-cell:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .timer {
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        
+        .success-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 100;
+        }
+        
+        .success-message h1 {
+            font-size: 48px;
+            color: white;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            margin-bottom: 20px;
+        }
+        
+        .success-message button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            border-radius: 50%;
+            animation: fall 4s ease-in-out infinite;
+        }
+        
+        @keyframes fall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="title">ENCONTRE O ÍCONE DIFERENTE</div>
+        <div class="instructions">Observe a grade de ícones e encontre aquele que é diferente dos demais. Clique nele quando encontrar!</div>
+        
+        <div id="iconGrid" class="icon-grid"></div>
+        
+        <div class="timer" id="timer">Tempo: 0s</div>
+    </div>
+    
+    <div class="success-message" id="successMessage">
+        <h1>Parabéns, você ganhou!</h1>
+        <button id="nextLevelBtn">Jogar Novamente</button>
+    </div>
+
+    <script>
+        var startTime;
+        var timerInterval;
+        var lastIconSetIndex = -1; // Armazena o índice do último conjunto de ícones usado
+        var iconSets = [
+            {
+                regular: '☂️',
+                different: '☔'
+            },
+            {
+                regular: '🌞',
+                different: '🌝'
+            },
+            {
+                regular: '🤭',
+                different: '🫢'
+            },
+            {
+                regular: '♠️',
+                different: '♣️'
+            },
+            {
+                regular: '🎂',
+                different: '🍰'
+            },
+            {
+                regular: '🥜',
+                different: '🥔'
+            },
+            {
+                regular: '🐪',
+                different: '🐐'
+            },
+            {
+                regular: '👄',
+                different: '🫦'
+            },
+            {
+                regular: '🌳',
+                different: '🌲'
+            },
+            {
+                regular: '📷',
+                different: '📸'
+            },
+            {
+                regular: '⛴️',
+                different: '🛳️'
+            },
+            {
+                regular: '🚗',
+                different: '🛻'
+            },
+            {
+                regular: '🙉',
+                different: '🐵'
+            },
+            {
+                regular: '🍎',
+                different: '🍅'
+            },
+            {
+                regular: '👨',
+                different: '🧒'
+            },
+            {
+                regular: '🏠',
+                different: '🏡'
+            },
+            {
+                regular: '🏅',
+                different: '🎖️'
+            }
+        ];
+        
+        function getRandomIconSetIndex() {
+            // Se só houver um conjunto de ícones, retorna 0
+            if (iconSets.length <= 1) return 0;
+            
+            // Cria um array com todos os índices exceto o último usado
+            var availableIndices = [];
+            for (var i = 0; i < iconSets.length; i++) {
+                if (i !== lastIconSetIndex) {
+                    availableIndices.push(i);
+                }
+            }
+            
+            // Escolhe aleatoriamente um dos índices disponíveis
+            var randomIndex = Math.floor(Math.random() * availableIndices.length);
+            return availableIndices[randomIndex];
+        }
+        
+        function createGrid() {
+            var grid = document.getElementById('iconGrid');
+            grid.innerHTML = '';
+            
+            var size = 8; // Grade fixa 8x8
+            
+            // Seleciona um conjunto de ícones diferente do último
+            var iconSetIndex = getRandomIconSetIndex();
+            lastIconSetIndex = iconSetIndex; // Atualiza o último índice usado
+            
+            var iconSet = iconSets[iconSetIndex];
+            
+            // Escolhe uma posição aleatória para o ícone diferente
+            var differentPosition = Math.floor(Math.random() * (size * size));
+            
+            for (var i = 0; i < size * size; i++) {
+                var cell = document.createElement('div');
+                cell.className = 'icon-cell';
+                
+                // Define o ícone diferente na posição aleatória
+                if (i === differentPosition) {
+                    cell.textContent = iconSet.different;
+                    cell.setAttribute('data-different', 'true');
+                } else {
+                    cell.textContent = iconSet.regular;
+                }
+                
+                cell.addEventListener('click', handleCellClick);
+                grid.appendChild(cell);
+            }
+            
+            // Inicia o temporizador
+            startTime = Date.now();
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+        
+        function updateTimer() {
+            var elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timer').textContent = 'Tempo: ' + elapsedTime + 's';
+        }
+        
+        function handleCellClick(e) {
+            if (e.target.getAttribute('data-different') === 'true') {
+                clearInterval(timerInterval);
+                showSuccessMessage();
+            } else {
+                // Resposta errada - muda brevemente a cor de fundo para vermelho
+                e.target.style.backgroundColor = '#ffcccc';
+                setTimeout(function() {
+                    e.target.style.backgroundColor = '';
+                }, 300);
+            }
+        }
+        
+        function showSuccessMessage() {
+            var successMessage = document.getElementById('successMessage');
+            successMessage.style.display = 'flex';
+            
+            // Cria confetes
+            createConfetti();
+        }
+        
+        function createConfetti() {
+            var colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            
+            for (var i = 0; i < 100; i++) {
+                var confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                document.body.appendChild(confetti);
+                
+                // Remove confetes após a animação
+                setTimeout(function(element) {
+                    return function() {
+                        if (element && element.parentNode) {
+                            element.parentNode.removeChild(element);
+                        }
+                    };
+                }(confetti), 4000);
+            }
+        }
+        
+        document.getElementById('nextLevelBtn').addEventListener('click', function() {
+            document.getElementById('successMessage').style.display = 'none';
+            
+            // Remove quaisquer confetes existentes
+            var confetti = document.getElementsByClassName('confetti');
+            while(confetti.length > 0) {
+                confetti[0].parentNode.removeChild(confetti[0]);
+            }
+            
+            createGrid();
+        });
+        
+        // Inicializa o jogo
+        createGrid();
+    </script>
+</body>
+</html>
